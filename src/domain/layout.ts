@@ -1,4 +1,12 @@
-import { COURSE_RECTS, PANEL_H_MM, PANEL_OUTLINE } from './geometry';
+import {
+  PANEL_H_MM,
+  PANEL_W_MM,
+  ROW_SHIFT_MM,
+  brickRectsOf,
+  courseRectsOf,
+  outlineOf,
+} from './geometry';
+import type { Orientation } from './geometry';
 import type { Grid } from './types';
 
 export type PlacedPanel = {
@@ -6,6 +14,7 @@ export type PlacedPanel = {
   row: number;
   xMm: number;
   yMm: number;
+  orientation: Orientation;
   cut: boolean;
 };
 
@@ -35,17 +44,34 @@ const EMPTY: LayoutResult = {
   overflow: false,
 };
 
+function mod(value: number, divisor: number): number {
+  return ((value % divisor) + divisor) % divisor;
+}
+
 export function metersToMm(meters: number): number {
   if (!Number.isFinite(meters)) return 0;
   return Math.round(meters * 1000);
 }
 
-export function materialRects(xMm: number, yMm: number): MaterialRect[] {
-  return COURSE_RECTS.map((course) => ({
+export function orientationAt(column: number): Orientation {
+  return mod(column, 2) === 0 ? 'A' : 'B';
+}
+
+export function materialRects(xMm: number, yMm: number, orientation: Orientation): MaterialRect[] {
+  return courseRectsOf(orientation).map((course) => ({
     x1: xMm + course.x,
     y1: yMm + course.y,
     x2: xMm + course.x + course.w,
     y2: yMm + course.y + course.h,
+  }));
+}
+
+export function placedBricks(panel: PlacedPanel): MaterialRect[] {
+  return brickRectsOf(panel.orientation).map((brick) => ({
+    x1: panel.xMm + brick.x,
+    y1: panel.yMm + brick.y,
+    x2: panel.xMm + brick.x + brick.w,
+    y2: panel.yMm + brick.y + brick.h,
   }));
 }
 
@@ -60,12 +86,26 @@ export function rectWallArea(rect: MaterialRect, widthMm: number, heightMm: numb
   return width * height;
 }
 
-function panelHitsWall(xMm: number, yMm: number, widthMm: number, heightMm: number): boolean {
-  return materialRects(xMm, yMm).some((rect) => rectWallArea(rect, widthMm, heightMm) > 0);
+function panelHitsWall(
+  xMm: number,
+  yMm: number,
+  orientation: Orientation,
+  widthMm: number,
+  heightMm: number,
+): boolean {
+  return materialRects(xMm, yMm, orientation).some(
+    (rect) => rectWallArea(rect, widthMm, heightMm) > 0,
+  );
 }
 
-function panelInsideWall(xMm: number, yMm: number, widthMm: number, heightMm: number): boolean {
-  return PANEL_OUTLINE.every(([x, y]) => {
+function panelInsideWall(
+  xMm: number,
+  yMm: number,
+  orientation: Orientation,
+  widthMm: number,
+  heightMm: number,
+): boolean {
+  return outlineOf(orientation).every(([x, y]) => {
     const px = xMm + x;
     const py = yMm + y;
     return px >= -1e-6 && py >= -1e-6 && px <= widthMm + 1e-6 && py <= heightMm + 1e-6;
@@ -73,39 +113,39 @@ function panelInsideWall(xMm: number, yMm: number, widthMm: number, heightMm: nu
 }
 
 /**
- * Tile a wall from the bottom-left corner.
- * Column i sits at x = i * pitchX (i = 0, 1, 2, …).
- * Even columns start on the bottom edge. Odd columns are shifted down
- * by `columnOffsetMm`, so they hang below the wall and are trimmed;
- * the same shift leaves a 75 mm step at the top that is also trimmed.
- * Panels whose base only touches the boundary (zero area) are not counted.
- * There is no column to the left of the corner: the tooth notches of column 0
- * stay on the wall edge and are finished in place.
+ * Rows run bottom-up from the left corner. Every panel in a row shares one
+ * height. Along a row the panels alternate A, B, A, B… at `pitchX`: B is A
+ * turned 180°, so a long course fills the neighbour's short-course recess.
+ * Odd rows are shifted right by ROW_SHIFT_MM (500). The panel that then
+ * sticks out past the left edge is cut, as are the right-hand end and a top
+ * row that passes the wall. A cut panel is still one whole panel to order.
  */
 export function layoutWall(widthMm: number, heightMm: number, grid: Grid): LayoutResult {
-  const { pitchXmm, pitchYmm, columnOffsetMm } = grid;
+  const { pitchXmm, pitchYmm } = grid;
   if (!(widthMm > 0) || !(heightMm > 0)) return EMPTY;
-  if (!(pitchXmm >= 1) || !(pitchYmm >= 1) || !Number.isFinite(columnOffsetMm)) return EMPTY;
+  if (!(pitchXmm >= 1) || !(pitchYmm >= 1)) return EMPTY;
   if ((widthMm / pitchXmm) * (heightMm / pitchYmm) > MAX_GRID_CELLS) {
     return { ...EMPTY, overflow: true };
   }
 
   const panels: PlacedPanel[] = [];
-  const iMax = Math.floor((widthMm - 1e-6) / pitchXmm);
-  for (let column = 0; column <= iMax; column += 1) {
-    const shift = column % 2 === 1 ? columnOffsetMm : 0;
-    const jLow = Math.floor((-PANEL_H_MM + shift) / pitchYmm) - 1;
-    const jHigh = Math.floor((heightMm + shift) / pitchYmm) + 1;
-    for (let row = jLow; row <= jHigh; row += 1) {
-      const xMm = column * pitchXmm;
-      const yMm = row * pitchYmm - shift;
-      if (!panelHitsWall(xMm, yMm, widthMm, heightMm)) continue;
-      const whole = panelInsideWall(xMm, yMm, widthMm, heightMm);
-      panels.push({ column, row, xMm, yMm, cut: !whole });
+  const rowMax = Math.floor((heightMm - 1e-6) / pitchYmm);
+  for (let row = 0; row <= rowMax; row += 1) {
+    const yMm = row * pitchYmm;
+    const shift = row % 2 === 1 ? ROW_SHIFT_MM : 0;
+    const columnMin = shift > 0 ? Math.floor((-PANEL_W_MM - shift) / pitchXmm) - 1 : 0;
+    const columnMax = Math.floor((widthMm - 1e-6 - shift) / pitchXmm) + 1;
+    for (let column = columnMin; column <= columnMax; column += 1) {
+      if (shift === 0 && column < 0) continue;
+      const xMm = shift + column * pitchXmm;
+      const orientation = orientationAt(column);
+      if (!panelHitsWall(xMm, yMm, orientation, widthMm, heightMm)) continue;
+      const whole = panelInsideWall(xMm, yMm, orientation, widthMm, heightMm);
+      panels.push({ column, row, xMm, yMm, orientation, cut: !whole });
     }
   }
 
-  panels.sort((a, b) => a.column - b.column || a.row - b.row);
+  panels.sort((a, b) => a.row - b.row || a.column - b.column);
   const cut = panels.reduce((sum, panel) => sum + (panel.cut ? 1 : 0), 0);
   return {
     panels,
@@ -124,7 +164,7 @@ export function coveredAreaMm2(
   return panels.reduce((sum, panel) => {
     return (
       sum +
-      materialRects(panel.xMm, panel.yMm).reduce(
+      materialRects(panel.xMm, panel.yMm, panel.orientation).reduce(
         (area, rect) => area + rectWallArea(rect, widthMm, heightMm),
         0,
       )
@@ -134,7 +174,7 @@ export function coveredAreaMm2(
 
 /** Positive area where two different panels both have base material. */
 export function overlapAreaMm2(panels: PlacedPanel[]): number {
-  const groups = panels.map((panel) => materialRects(panel.xMm, panel.yMm));
+  const groups = panels.map((panel) => materialRects(panel.xMm, panel.yMm, panel.orientation));
   let area = 0;
   for (let i = 0; i < groups.length; i += 1) {
     for (let j = i + 1; j < groups.length; j += 1) {
@@ -150,10 +190,44 @@ export function overlapAreaMm2(panels: PlacedPanel[]): number {
   return area;
 }
 
+export function brickOverlapAreaMm2(panels: PlacedPanel[]): number {
+  const bricks = panels.flatMap((panel) => placedBricks(panel));
+  let area = 0;
+  for (let i = 0; i < bricks.length; i += 1) {
+    for (let j = i + 1; j < bricks.length; j += 1) {
+      const width = overlapLength(bricks[i].x1, bricks[i].x2, bricks[j].x1, bricks[j].x2);
+      const height = overlapLength(bricks[i].y1, bricks[i].y2, bricks[j].y1, bricks[j].y2);
+      if (width > 1e-6 && height > 1e-6) area += width * height;
+    }
+  }
+  return area;
+}
+
+/** Gaps between successive bricks of one course. A sound joint is exactly 10 mm. */
+export function brickJointGaps(panels: PlacedPanel[]): number[] {
+  const byCourse = new Map<number, Array<[number, number]>>();
+  for (const panel of panels) {
+    for (const brick of placedBricks(panel)) {
+      const key = Math.round(brick.y1 * 1000);
+      const list = byCourse.get(key) ?? [];
+      list.push([brick.x1, brick.x2]);
+      byCourse.set(key, list);
+    }
+  }
+  const gaps: number[] = [];
+  for (const segments of byCourse.values()) {
+    segments.sort((a, b) => a[0] - b[0]);
+    for (let index = 1; index < segments.length; index += 1) {
+      gaps.push(segments[index][0] - segments[index - 1][1]);
+    }
+  }
+  return gaps;
+}
+
 export function pointHits(x: number, y: number, panels: PlacedPanel[]): number {
   let hits = 0;
   for (const panel of panels) {
-    for (const rect of materialRects(panel.xMm, panel.yMm)) {
+    for (const rect of materialRects(panel.xMm, panel.yMm, panel.orientation)) {
       if (x > rect.x1 && x < rect.x2 && y > rect.y1 && y < rect.y2) {
         hits += 1;
         break;
@@ -162,3 +236,5 @@ export function pointHits(x: number, y: number, panels: PlacedPanel[]): number {
   }
   return hits;
 }
+
+export { PANEL_H_MM, PANEL_W_MM };

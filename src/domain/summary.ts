@@ -73,7 +73,6 @@ export function summarize(walls: Wall[], settings: Settings): OrderSummary {
   const grid = {
     pitchXmm: settings.pitchXmm,
     pitchYmm: settings.pitchYmm,
-    columnOffsetMm: settings.columnOffsetMm,
   };
 
   const results: WallResult[] = walls.map((wall) => {

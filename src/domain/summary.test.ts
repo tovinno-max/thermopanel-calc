@@ -50,28 +50,28 @@ describe('order rounding', () => {
 });
 
 describe('example facade', () => {
-  it('orders 110 panels by layout for walls 10×3 and 6×3', () => {
+  it('orders 102 panels by layout for walls 10×3 and 6×3', () => {
     const summary = summarize(examples, { ...defaultSettings, method: 'layout' });
     expect(summary.walls[0]).toMatchObject({
       areaM2: 30,
-      whole: 50,
-      cut: 16,
-      layoutTotal: 66,
+      whole: 53,
+      cut: 7,
+      layoutTotal: 60,
       areaTotal: 58,
-      counted: 66,
+      counted: 60,
     });
     expect(summary.walls[1]).toMatchObject({
       areaM2: 18,
-      whole: 27,
-      cut: 11,
-      layoutTotal: 38,
+      whole: 30,
+      cut: 7,
+      layoutTotal: 37,
       areaTotal: 35,
-      counted: 38,
+      counted: 37,
     });
     expect(summary.totalAreaM2).toBe(48);
-    expect(summary.withoutMargin).toBe(104);
-    expect(summary.withMargin).toBe(110);
-    expect(summary.toOrder).toBe(110);
+    expect(summary.withoutMargin).toBe(97);
+    expect(summary.withMargin).toBe(102);
+    expect(summary.toOrder).toBe(102);
   });
 
   it('orders 98 panels by area for the same walls, with 5% margin and minimum 50', () => {

@@ -83,6 +83,7 @@ export function SpecTab({ settings, summary, onChange, onReset }: Props) {
             min={1}
             max={5000}
             step={1}
+            hint="В ряду панели чередуются: A и поворот на 180° (B). При 875 мм шов между ними 10 мм."
             onChange={(value) => set('pitchXmm', value)}
           />
           <NumberField
@@ -91,16 +92,8 @@ export function SpecTab({ settings, summary, onChange, onReset }: Props) {
             min={1}
             max={5000}
             step={1}
+            hint="Нечётный ряд сдвинут вправо на 500 мм: вертикальные швы расходятся на 375 мм, а кирпич верхнего ряда садится на середину шва нижнего."
             onChange={(value) => set('pitchYmm', value)}
-          />
-          <NumberField
-            label="Сдвиг нечётной колонны вниз, мм"
-            value={settings.columnOffsetMm}
-            min={0}
-            max={5000}
-            step={1}
-            hint="Рекомендуется 75 мм — один ряд. Зубец входит во впадину соседней колонны."
-            onChange={(value) => set('columnOffsetMm', value)}
           />
           <NumberField
             label="Запас, %"

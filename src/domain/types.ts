@@ -6,8 +6,6 @@ export type Settings = {
   usefulAreaM2: number;
   pitchXmm: number;
   pitchYmm: number;
-  /** Odd columns are shifted down by this many millimetres. */
-  columnOffsetMm: number;
   method: CountMethod;
   marginPercent: number;
   minOrder: number;
@@ -27,5 +25,4 @@ export type Wall = {
 export type Grid = {
   pitchXmm: number;
   pitchYmm: number;
-  columnOffsetMm: number;
 };

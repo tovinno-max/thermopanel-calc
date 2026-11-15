@@ -1,4 +1,5 @@
 import { brickColor, jointColor } from '../domain/colors';
+import { ROW_SHIFT_MM } from '../domain/geometry';
 import { formatArea, formatFlexible, formatInt, formatMeters } from '../domain/format';
 import type { OrderSummary, WallResult } from '../domain/summary';
 import type { Settings, Wall } from '../domain/types';
@@ -19,8 +20,7 @@ type Props = {
 export function WallsTab({ walls, settings, summary, onAdd, onRemove, onUpdate }: Props) {
   const brick = brickColor(settings.brickColorId);
   const joint = jointColor(settings.jointColorId);
-  const standard =
-    settings.pitchXmm === 875 && settings.pitchYmm === 600 && settings.columnOffsetMm === 75;
+  const standard = settings.pitchXmm === 875 && settings.pitchYmm === 600;
 
   return (
     <div className="stack">
@@ -97,26 +97,27 @@ export function WallsTab({ walls, settings, summary, onAdd, onRemove, onUpdate }
         <div className="section-head">
           <h2>Раскладка по стенам</h2>
           <p className="hint">
-            Старт от левого нижнего угла. Шаг {formatFlexible(settings.pitchXmm)}×
-            {formatFlexible(settings.pitchYmm)} мм, нечётные колонны сдвинуты вниз на{' '}
-            {formatFlexible(settings.columnOffsetMm)} мм. На схеме контур основы каждой панели.
+            Ряды снизу вверх, от левого нижнего угла. В ряду A, B, A, B — каждая следующая панель
+            повёрнута на 180°. Шаг {formatFlexible(settings.pitchXmm)}×
+            {formatFlexible(settings.pitchYmm)} мм, нечётные ряды сдвинуты вправо на {ROW_SHIFT_MM}{' '}
+            мм. Подрезанная панель заказывается целиком.
           </p>
           {!standard && (
             <p className="warn">
-              Шаг отличается от рекомендуемого 875×600 мм со сдвигом 75 мм — зубцы могут не сойтись
-              без зазоров.
+              Шаг отличается от 875×600 мм — зубцы могут не сойтись без зазоров. Сдвиг ряда остаётся{' '}
+              {ROW_SHIFT_MM} мм.
             </p>
           )}
         </div>
         <ul className="legend">
           <li>
-            <i className="key solid" /> Целая панель
+            <i className="key solid" /> A — короткий ряд сверху
           </li>
           <li>
-            <i className="key dashed" /> Подрезанная панель
+            <i className="key b-mark" /> B — длинный ряд сверху, поворот 180°
           </li>
           <li>
-            <i className="key wall" /> Кромка стены во впадине первой колонны
+            <i className="key dashed" /> Подрезка, в заказ идёт целиком
           </li>
         </ul>
         <div className="results">
