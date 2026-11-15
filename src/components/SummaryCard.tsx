@@ -1,4 +1,5 @@
 import { brickColor, jointColor } from '../domain/colors';
+import { ROW_SHIFT_MM } from '../domain/geometry';
 import { formatArea, formatFlexible, formatInt, formatPercent, methodLabel } from '../domain/format';
 import type { OrderSummary } from '../domain/summary';
 import type { Settings } from '../domain/types';
@@ -20,7 +21,7 @@ export function SummaryCard({ summary, settings }: Props) {
     ['Панелей с запасом', `${formatInt(summary.withMargin)} шт.`],
     ['Минимальный заказ', `${formatInt(summary.minOrder)} шт.`],
     ['Округление до кратности', formatInt(summary.multiple)],
-    ['Шаг раскладки', `${formatFlexible(settings.pitchXmm)}×${formatFlexible(settings.pitchYmm)} мм, сдвиг ${formatFlexible(settings.columnOffsetMm)} мм`],
+    ['Шаг раскладки', `${formatFlexible(settings.pitchXmm)}×${formatFlexible(settings.pitchYmm)} мм, сдвиг ряда ${formatInt(ROW_SHIFT_MM)} мм`],
     ['Полезная площадь панели', `${formatFlexible(settings.usefulAreaM2)} м²`],
   ];
 

@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { BrickColor, JointColor } from '../domain/colors';
-import { BRICK_RECTS, PANEL_OUTLINE } from '../domain/geometry';
+import { PANEL_H_MM, PANEL_W_MM, brickRectsOf, outlineOf } from '../domain/geometry';
 import type { PlacedPanel } from '../domain/layout';
 
 type Props = {
@@ -21,8 +21,10 @@ export function WallSvg({ widthMm, heightMm, panels, brick, joint, drawBricks, l
   const clipId = `clip${useId().replace(/:/g, '')}`;
   const stroke = Math.max(widthMm, heightMm) / 480;
   const pad = stroke * 3;
-  const outlineOf = (panel: PlacedPanel) =>
-    PANEL_OUTLINE.map(([x, y]) => screenPoint(panel.xMm + x, panel.yMm + y, heightMm)).join(' ');
+  const outlineOfPanel = (panel: PlacedPanel) =>
+    outlineOf(panel.orientation)
+      .map(([x, y]) => screenPoint(panel.xMm + x, panel.yMm + y, heightMm))
+      .join(' ');
   const wholeStroke = joint.id === 'temnyj' ? '#f4efe6' : '#2b2622';
   const ordered = [...panels].sort((a, b) => Number(a.cut) - Number(b.cut));
 
@@ -42,10 +44,10 @@ export function WallSvg({ widthMm, heightMm, panels, brick, joint, drawBricks, l
       <rect x="0" y="0" width={widthMm} height={heightMm} fill="#f3eadc" />
       <g clipPath={`url(#${clipId})`}>
         {panels.map((panel) => (
-          <g key={`${panel.column}-${panel.row}`}>
-            <polygon points={outlineOf(panel)} fill={joint.fill} />
+          <g key={`${panel.row}-${panel.column}`}>
+            <polygon points={outlineOfPanel(panel)} fill={joint.fill} />
             {drawBricks &&
-              BRICK_RECTS.map((face) => {
+              brickRectsOf(panel.orientation).map((face) => {
                 const x = panel.xMm + face.x;
                 const y = heightMm - (panel.yMm + face.y + face.h);
                 return (
@@ -61,13 +63,14 @@ export function WallSvg({ widthMm, heightMm, panels, brick, joint, drawBricks, l
                   />
                 );
               })}
-            {panel.cut && <polygon points={outlineOf(panel)} fill="#d35400" opacity="0.13" />}
+            {panel.cut && <polygon points={outlineOfPanel(panel)} fill="#d35400" opacity="0.13" />}
+            <PanelMark panel={panel} widthMm={widthMm} heightMm={heightMm} />
           </g>
         ))}
         {ordered.map((panel) => (
           <polygon
-            key={`edge-${panel.column}-${panel.row}`}
-            points={outlineOf(panel)}
+            key={`edge-${panel.row}-${panel.column}`}
+            points={outlineOfPanel(panel)}
             fill="none"
             stroke={panel.cut ? '#c2410c' : wholeStroke}
             strokeWidth={panel.cut ? stroke * 1.7 : stroke * 1.15}
@@ -86,5 +89,39 @@ export function WallSvg({ widthMm, heightMm, panels, brick, joint, drawBricks, l
         strokeWidth={stroke * 1.35}
       />
     </svg>
+  );
+}
+
+function PanelMark({
+  panel,
+  widthMm,
+  heightMm,
+}: {
+  panel: PlacedPanel;
+  widthMm: number;
+  heightMm: number;
+}) {
+  const left = Math.max(panel.xMm, 0);
+  const right = Math.min(panel.xMm + PANEL_W_MM, widthMm);
+  const bottom = Math.max(panel.yMm, 0);
+  const top = Math.min(panel.yMm + PANEL_H_MM, heightMm);
+  const spanX = right - left;
+  const spanY = top - bottom;
+  if (spanX < 140 || spanY < 90) return null;
+  const size = Math.min(spanX, spanY, 280) * 0.42;
+  return (
+    <text
+      x={(left + right) / 2}
+      y={heightMm - (bottom + top) / 2}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={size}
+      fontFamily="Manrope, sans-serif"
+      fontWeight={700}
+      fill="#6e2c18"
+      opacity={0.72}
+    >
+      {panel.orientation}
+    </text>
   );
 }

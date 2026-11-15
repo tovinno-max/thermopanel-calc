@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   BRICK_RECTS,
+  BRICK_RECTS_B,
   COURSE_RECTS,
   PANEL_OUTLINE,
+  PANEL_OUTLINE_B,
   PANEL_USEFUL_M2,
+  PANEL_H_MM,
+  PANEL_W_MM,
   ROWS_BOTTOM_UP,
+  ROWS_BOTTOM_UP_B,
+  rotateBox180,
 } from './geometry';
 
 const EXPECTED_OUTLINE: Array<[number, number]> = [
@@ -82,5 +88,24 @@ describe('panel geometry', () => {
   it('matches the useful area of the eight courses', () => {
     const area = COURSE_RECTS.reduce((sum, row) => sum + row.w * row.h, 0);
     expect(area).toBe(525_000);
+  });
+
+  it('turns orientation B through 180° so the long course is on top', () => {
+    expect([...ROWS_BOTTOM_UP_B]).toEqual([3, 4, 3, 4, 3, 4, 3, 4]);
+    const rotated = PANEL_OUTLINE.map(([x, y]) => [PANEL_W_MM - x, PANEL_H_MM - y]);
+    const asKey = (points: Array<[number, number]>) =>
+      points
+        .map(([x, y]) => `${x},${y}`)
+        .sort()
+        .join('|');
+    expect(asKey(PANEL_OUTLINE_B)).toBe(asKey(rotated as Array<[number, number]>));
+    expect(shoelace(PANEL_OUTLINE_B)).toBe(525_000);
+    const rotatedBricks = BRICK_RECTS.map((brick) => rotateBox180(brick));
+    const key = (boxes: typeof BRICK_RECTS) =>
+      boxes
+        .map((box) => `${box.x},${box.y},${box.w},${box.h}`)
+        .sort()
+        .join('|');
+    expect(key(BRICK_RECTS_B)).toBe(key(rotatedBricks));
   });
 });

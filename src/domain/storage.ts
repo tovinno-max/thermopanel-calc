@@ -54,7 +54,6 @@ function parseSettings(value: unknown): Settings {
     usefulAreaM2: numberIn(raw.usefulAreaM2, 0.001, 10) ?? defaultSettings.usefulAreaM2,
     pitchXmm: numberIn(raw.pitchXmm, 1, 5000) ?? defaultSettings.pitchXmm,
     pitchYmm: numberIn(raw.pitchYmm, 1, 5000) ?? defaultSettings.pitchYmm,
-    columnOffsetMm: numberIn(raw.columnOffsetMm, 0, 5000) ?? defaultSettings.columnOffsetMm,
     method,
     marginPercent: numberIn(raw.marginPercent, 0, 100) ?? defaultSettings.marginPercent,
     minOrder: numberIn(raw.minOrder, 0, 100_000) ?? defaultSettings.minOrder,

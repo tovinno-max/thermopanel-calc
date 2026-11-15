@@ -4,7 +4,6 @@ export const defaultSettings: Settings = {
   usefulAreaM2: 0.52,
   pitchXmm: 875,
   pitchYmm: 600,
-  columnOffsetMm: 75,
   method: 'layout',
   marginPercent: 5,
   minOrder: 50,
